@@ -10,15 +10,18 @@
 #include "McReady.h"
 #include "devWesterboer.h"
 #include "InputEvents.h"
-
+#define VW_BIDIRECTIONAL
 static BOOL PWES0(PDeviceDescriptor_t d, TCHAR *String, NMEA_INFO *pGPS);
 static BOOL PWES1(PDeviceDescriptor_t d, TCHAR *String, NMEA_INFO *pGPS);
+static BOOL PWES2(PDeviceDescriptor_t d, TCHAR *String, NMEA_INFO *pGPS);
 BOOL devWesterboerPutMacCready(PDeviceDescriptor_t d, double Mc);
 BOOL devWesterboerPutBallast(PDeviceDescriptor_t d, double Ballast);
 BOOL devWesterboerPutBugs(PDeviceDescriptor_t d, double Bus);
 BOOL devWesterboerPutWingload(PDeviceDescriptor_t d, double fWingload);
 extern bool UpdateBaroSource(NMEA_INFO* pGPS, const short parserid, const PDeviceDescriptor_t d, const double fAlt);
 
+int oldSerial;
+int SerialNumber =0;
 int iReceiveSuppress = 0;
 
 int iWEST_RxUpdateTime=0;
@@ -44,14 +47,30 @@ TCHAR  szCheck[254];
 
 bool RequestInfos(PDeviceDescriptor_t d)
 {
-static int i =0;
-if (i++ > 10)
-	i=0;
+#ifdef  VW_BIDIRECTIONAL
 TCHAR  szTmp[254];
+static int i,j =0;
+if (i++ > 5)
+{
+	i=0;
+
   _stprintf(szTmp, TEXT("$PWES4,1,,,,,,,,"));
   NMEAddCheckSumStrg(szTmp);
   d->Com->WriteString(szTmp);
-
+}
+else
+{
+  if(SerialNumber == 0)
+  { // request serian numbers
+	if(j++> 10)
+	{ j=0;
+	  _stprintf(szTmp, TEXT("$PWES4,2,,,,,,,,"));
+	  NMEAddCheckSumStrg(szTmp);
+	  d->Com->WriteString(szTmp);
+	}
+  }
+}
+#endif
   return true;
 }
 
@@ -96,9 +115,8 @@ if(_tcsncmp(TEXT("$PWES0"), String, 6)==0)
 
   if(_tcsncmp(TEXT("$PWES0"), String, 6)==0)
     {
-	   RequestInfos(d);
+	  RequestInfos(d);
       return PWES0(d, &String[7], pGPS);
-
     } 
   else
     if(_tcsncmp(TEXT("$PWES1"), String, 6)==0)
@@ -110,6 +128,11 @@ if(_tcsncmp(TEXT("$PWES0"), String, 6)==0)
 	  }
       return PWES1(d, &String[7], pGPS);
     }
+    else
+      if(_tcsncmp(TEXT("$PWES2"), String, 6)==0)
+      {
+    	return PWES2(d, &String[7], pGPS);
+      }
   return FALSE;
 
 }
@@ -141,7 +164,7 @@ static BOOL WesterboerInstall(PDeviceDescriptor_t d){
   d->LinkTimeout = WesterboerLinkTimeout;
   d->Declare = NULL;
   d->IsGPSSource = NULL;
-  d->IsBaroSource = WesterboerIsBaroSource;
+  d->IsBaroSource =  WesterboerIsBaroSource;
 
   return(TRUE);
 
@@ -187,7 +210,29 @@ static BOOL PWES0(PDeviceDescriptor_t d, TCHAR *String, NMEA_INFO *pGPS)
   double vtas, vias;
   double altqne, altqnh;
   static bool initqnh=true;
+  static int NoMsg =0;
+ // static int HardwareId = 0;
 
+
+
+  if( (NoMsg <10) && ( pGPS->SerialNumber != oldSerial))
+  {
+	NoMsg++ ;
+    NMEAParser::ExtractParameter(String,ctemp,0);
+    pGPS->HardwareId= StrToDouble(ctemp,NULL);
+    switch (pGPS->HardwareId)
+    {
+      case 21:  _tcscpy(d->Name, TEXT("VW1010")); break;
+      case 22:  _tcscpy(d->Name, TEXT("VW1020")); break;
+      case 23:  _tcscpy(d->Name, TEXT("VW1030")); break;
+      default:  _tcscpy(d->Name, TEXT("Westerboer")); break;
+    }
+	StartupStore(_T(". %s\n"),ctemp);
+	_stprintf(ctemp, _T("%s  DETECTED"), d->Name);
+	oldSerial = pGPS->SerialNumber;
+	DoStatusMessage(ctemp);
+	StartupStore(_T(". %s\n"),ctemp);
+  }
 
   // instant vario
   NMEAParser::ExtractParameter(String,ctemp,1);
@@ -351,13 +396,13 @@ static int  iOldVarioSwitch=0;
 
 BOOL devWesterboerPutMacCready(PDeviceDescriptor_t d, double Mc){
 	  (void)d;
-
-
+#ifdef  VW_BIDIRECTIONAL
+iReceiveSuppress = 1;
 TCHAR  szTmp[254];
   _stprintf(szTmp, TEXT("$PWES4,,%d,,,,,,,"),(int)(Mc*10.0f+0.49f));
   NMEAddCheckSumStrg(szTmp);
   d->Com->WriteString(szTmp);
-
+#endif
   return(TRUE);
 
 }
@@ -365,12 +410,13 @@ TCHAR  szTmp[254];
 
 BOOL devWesterboerPutWingload(PDeviceDescriptor_t d, double fWingload){
 	  (void)d;
-
+#ifdef  VW_BIDIRECTIONAL
   TCHAR  szTmp[254];
+  iReceiveSuppress = 1;
     _stprintf(szTmp, TEXT("$PWES4,,,,%d,,,,,"),(int)(fWingload *10.0f+0.5f));
     NMEAddCheckSumStrg(szTmp);
     d->Com->WriteString(szTmp);
-
+#endif
   return(TRUE);
 
 }
@@ -385,14 +431,72 @@ BOOL devWesterboerPutBallast(PDeviceDescriptor_t d, double Ballast){
 
 BOOL devWesterboerPutBugs(PDeviceDescriptor_t d, double Bug){
 	  (void)d;
-
-iReceiveSuppress = 2;
+#ifdef  VW_BIDIRECTIONAL
+iReceiveSuppress = 1;
   TCHAR  szTmp[254];
     _stprintf(szTmp, TEXT("$PWES4,,,,,%d,,,,"),(int)((1.0-Bug)*100.0+0.5));
     NMEAddCheckSumStrg(szTmp);
     d->Com->WriteString(szTmp);
+#endif
   return(TRUE);
 
 }
+
+static BOOL PWES2(PDeviceDescriptor_t d, TCHAR *String, NMEA_INFO *pGPS)
+{
+//	$PWES2: Datenausgabe, Geräteparameter
+//	$PWES2,DD,SSSS,YY,FFFF*CS<CR><LF>
+//	Symbol Inhalt Einheit Wertebereich Beispiel
+//	DD Device 20=VW1000,
+//	21=VW1010,
+//	22=VW1020,
+//	23=VW1030,
+//	60=VW1150
+//	22 für VW1020
+//	SSSS Seriennummer 0 .. 9999
+//	YY Baujahr 0 .. 99 10 = 2010
+//	FFFF Firmware * 100 100 .. 9999 101 = 1.01
+//	$PWES2,60,1234,12,3210*22
+  TCHAR ctemp[80];
+  static int NoMsg;
+  if((pGPS->SerialNumber == 0) && (NoMsg <10))
+  {
+	NoMsg++ ;
+    NMEAParser::ExtractParameter(String,ctemp,0);
+    pGPS->HardwareId= StrToDouble(ctemp,NULL);
+    switch (pGPS->HardwareId)
+    {
+      case 21:  _tcscpy(d->Name, TEXT("VW1010")); break;
+      case 22:  _tcscpy(d->Name, TEXT("VW1020")); break;
+      case 23:  _tcscpy(d->Name, TEXT("VW1030")); break;
+      case 60:  _tcscpy(d->Name, TEXT("VW1150")); break;
+      default:  _tcscpy(d->Name, TEXT("Westerboer")); break;
+    }
+
+
+	NMEAParser::ExtractParameter(String,ctemp,1);
+	pGPS->SerialNumber= (int)StrToDouble(ctemp,NULL);
+	SerialNumber = pGPS->SerialNumber;
+
+	NMEAParser::ExtractParameter(String,ctemp,2);
+	int Year = (int)(StrToDouble(ctemp,NULL));
+
+	NMEAParser::ExtractParameter(String,ctemp,3);
+	pGPS->SoftwareVer= StrToDouble(ctemp,NULL)/100.0;
+
+
+
+    _stprintf(ctemp, _T("%s (#%i) DETECTED"), d->Name, pGPS->SerialNumber);
+    DoStatusMessage(ctemp);
+	StartupStore(_T(". %s\n"),ctemp);
+    _stprintf(ctemp, _T("SW Ver:%3.2f  HW Ver:%i "),  pGPS->SoftwareVer, Year);
+    DoStatusMessage(ctemp);
+	StartupStore(_T(". %s\n"),ctemp);
+
+  }
+  // nothing to do
+  return(true);
+} // LXWP1()
+
 
 
