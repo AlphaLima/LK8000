@@ -542,7 +542,9 @@ else
 	else
       if (_tcsncmp(_T("$LXWP2"), sentence, 6) == 0)
         return LXWP2(d, sentence + 7, info);
-
+      else
+        if (_tcsncmp(_T("$LXWP1"), sentence, 6) == 0)
+          return LXWP1(d, sentence + 7, info);
 
 #ifdef OLD_LX_SENTENCES
 	else
