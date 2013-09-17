@@ -121,17 +121,25 @@ bool DetectFreeFlying(NMEA_INFO *Basic, DERIVED_INFO *Calculated) {
 	    	dist = 9999; // set to far away if best alternate  not valid
 	      }
 	    }
-
-		if ( AltitudeAGL  <=(GearWarningAltitude/1000))
+#define MAX_NO_GEAR_WARN 10
+static int NoMessages =0;
+		if (( AltitudeAGL  <=(GearWarningAltitude/1000)) && (NoMessages < MAX_NO_GEAR_WARN))
 		{
 		  if(!nowGearWarning)
 		  {
-		    if(dist < 3700) // show gear warning if 2,5km close to landable
+		    if(dist < 3700) // show gear warning if 2Nautical Miles close to landable
 		    {
 			  LKSound(_T("LK_GEARWARNING.WAV"));
 			  DoStatusMessage(gettext(TEXT("_@M1834_")),NULL,false);  // LKTOKEN _@M1834_ "Prepare for landing !"
 			  nowGearWarning=true;
+			  NoMessages++;
 		    }
+			if (NoMessages==MAX_NO_GEAR_WARN) {
+				StartupStore(_T("... GOING SILENT on too many Gear warnings.  %s%s"),WhatTimeIsIt(),NEWLINE);
+
+				DoStatusMessage(MsgToken(2304)); // GOING SILENT ON GEAR REPORTING
+				NoMessages++;	// we go to 11, and never be back here		  }
+			}
 		  }
 		}
 		else
