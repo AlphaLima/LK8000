@@ -153,6 +153,13 @@ void dlgAddMultiSelectListItem(long* pNew ,int Idx, char type, double Distance){
 
 	if(type == IM_TASK_PT )
 	{
+#ifdef GOTO_AS_SIMPLETASK
+	  int iLastTaskPoint =0;
+    	while( ValidTaskPoint(iLastTaskPoint))
+    	  iLastTaskPoint++;
+      if(iLastTaskPoint <2)
+    	  return;
+#endif
 	  if(ValidTaskPoint(PanTaskEdit))
 	    return;
 	  if( Task[Idx].Index	== RESWP_PANPOS)
@@ -385,23 +392,24 @@ static void OnMultiSelectListPaintListItem(WindowControl * Sender, HDC hDC){
         	while( ValidTaskPoint(iLastTaskPoint))
         	  iLastTaskPoint++;
         	iLastTaskPoint--;
-
-            if(iTaskIdx ==0)
+       //   if(iLastTaskPoint > 1)
+          {
+            if(iTaskIdx == iLastTaskPoint)
             {
-			  _stprintf(text1,TEXT("%s: (%s)"),gettext(_T("_@M2301_")), WayPointList[idx].Name   );  // _@M2301_  "S"    # S = Start Task point
-			  _stprintf(text2,TEXT("Radius %3.1f%s (%i%s)"), StartRadius*DISTANCEMODIFY
-			                                               , Units::GetDistanceName()
-							                               , (int)(WayPointList[idx].Altitude * ALTITUDEMODIFY)
-								                           , Units::GetAltitudeName());
-            }
-            else
-              if(iTaskIdx == iLastTaskPoint)
-              {
 			     _stprintf(text1,TEXT("%s: (%s) "),gettext(_T("_@M2303_")), WayPointList[idx].Name   );       //	_@M2303_  "F"                 // max 30         30 => max 60 char
 				 _stprintf(text2,TEXT("Radius %3.1f%s (%i%s)"), FinishRadius*DISTANCEMODIFY
 			                                                  , Units::GetDistanceName()
 							                                  , (int)(WayPointList[idx].Altitude * ALTITUDEMODIFY)
 								                              , Units::GetAltitudeName());
+            }
+            else
+              if(iTaskIdx ==0)
+              {
+    		    _stprintf(text1,TEXT("%s: (%s)"),gettext(_T("_@M2301_")), WayPointList[idx].Name   );  // _@M2301_  "S"    # S = Start Task point
+    			_stprintf(text2,TEXT("Radius %3.1f%s (%i%s)"), StartRadius*DISTANCEMODIFY
+    			                                               , Units::GetDistanceName()
+    							                               , (int)(WayPointList[idx].Altitude * ALTITUDEMODIFY)
+    								                           , Units::GetAltitudeName());
               }
               else
               {
@@ -422,7 +430,7 @@ static void OnMultiSelectListPaintListItem(WindowControl * Sender, HDC hDC){
 							                          , Units::GetAltitudeName());
               }
 
-
+          }
 			UnlockTaskData(); // protect from external task changes
 		  }
 		break;

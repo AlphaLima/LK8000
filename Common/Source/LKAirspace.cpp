@@ -2576,7 +2576,7 @@ CAirspaceList CAirspaceManager::GetNearAirspacesAtPoint(const double &lon, const
   CCriticalSection::CGuard guard(_csairspaces);
   for (it = _airspaces.begin(); it != _airspaces.end(); ++it)
   {
-	if ((*it)->DrawStyle())
+//	if ((*it)->DrawStyle())
 	{
 	  (*it)->CalculateDistance(&HorDist, &Bearing, &VertDist, lon, lat);
 	  if(HorDist < searchrange)
