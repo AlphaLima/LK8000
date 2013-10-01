@@ -17,9 +17,6 @@ bool MapWindow::Event_NearestWaypointDetails(double lon, double lat,
                                              double range,
                                              bool pan) {
 
-#ifndef	MULTISELECT
-
-#else
 double Dist;
 unsigned int i;
 double dyn_range = range*3.5;
@@ -39,9 +36,6 @@ if(dyn_range > 12000)
 	dyn_range = 12000;
 start_search:
 
-
-if (EnableSoundModes)
-	PlayResource(TEXT("IDR_WAV_MM0"));
 
 
 #ifdef BUTTONS_MS
@@ -134,7 +128,7 @@ if (EnableSoundModes)
     }
 
 
-#ifdef TASK_MULTISELECT
+// TASK MULTISELECT
 int SecType= DAe;
 double SecRadius =0;
 double Bear=0;
@@ -160,7 +154,7 @@ LockTaskData();
   }
 UnlockTaskData();
 
-#endif
+
   if((dlgGetNoElements() ==0)/* && pan */)
   {
 	  if(dyn_range < 120000)
@@ -182,7 +176,6 @@ UnlockTaskData();
 
     return true; // nothing found..
   }
-#endif
   return false;
 }
 
@@ -191,9 +184,6 @@ UnlockTaskData();
 bool MapWindow::Event_InteriorAirspaceDetails(double lon, double lat) {
 
 
-#if TESTBENCH
-//StartupStore(_T("... Airspace Map Select!\n"));
-#endif
 if(mode.Is(Mode::MODE_PAN))
 	return false;
 return Event_NearestWaypointDetails( lon,  lat,  500*zoom.RealScale(),false);
@@ -258,14 +248,6 @@ void MapWindow::Event_Pan(int vswitch) {
       MapWindow::ForceVisibilityScan=true;
     }
 	
-  }
-  if(ValidTaskPoint(PanTaskEdit))
-  {
-    LockTaskData();
-    MapWindow::GliderCenter=false;
-    PanLongitude =  WayPointList[ Task[PanTaskEdit].Index].Longitude ;
-    PanLatitude  =  WayPointList[ Task[PanTaskEdit].Index].Latitude ;
-    UnlockTaskData();
   }
   RefreshMap();
 }
