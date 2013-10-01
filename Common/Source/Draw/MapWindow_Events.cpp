@@ -35,9 +35,10 @@ bool  landablefound = false;
 if(dyn_range < 5000)
 	dyn_range = 5000;
 
+if(dyn_range > 12000)
+	dyn_range = 12000;
 start_search:
-//if(dyn_range > 12000)
-//	dyn_range = 12000;
+
 
 if (EnableSoundModes)
 	PlayResource(TEXT("IDR_WAV_MM0"));
