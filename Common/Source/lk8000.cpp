@@ -268,7 +268,7 @@ int WINAPI WinMain(     HINSTANCE hInstance,
   _tcscpy(startDeviceFile, defaultDeviceFile);
 
 
-  LK8000GetOpts(lpCmdLine);
+  LK8000GetOpts();
 
   InitCommonControls();
   InitSineTable();
