@@ -13,7 +13,7 @@
 #include "DoInits.h"
 
 
-#ifndef LKCOMPETITION
+#if 1
 //
 // Turn Rate Indicator
 //

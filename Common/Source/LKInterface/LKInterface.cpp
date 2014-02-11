@@ -46,7 +46,7 @@ redo:
 	if (CURMODE == MSM_INFO_CONTEST) {
 		if (!UseContestEngine()) goto redo;
 	}
-#ifdef LKCOMPETITION
+#if 0
 	if (CURMODE == MSM_INFO_TRI) goto redo;
 #endif
 	if (CURMODE == MSM_WELCOME) goto redo;
@@ -93,7 +93,7 @@ redo:
 	if (!UseContestEngine()) {
 		if (CURMODE == MSM_INFO_CONTEST) goto redo;
 	}
-#ifdef LKCOMPETITION
+#if 0
 	if (CURMODE == MSM_INFO_TRI) goto redo;
 #endif
 	if (CURMODE == MSM_WELCOME) goto redo;
