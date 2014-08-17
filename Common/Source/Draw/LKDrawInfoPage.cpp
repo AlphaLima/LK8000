@@ -196,7 +196,7 @@ void MapWindow::DrawInfoPage(HDC hdc,  RECT rc, bool forceinit )
 			wsprintf(Buffer,_T("%d.%d %s"),ModeIndex, curtype+1, gettext(TEXT("_@M908_"))); // Custom
 			break;
 		case IM_TRI:
-#ifndef LKCOMPETITION
+#if 1
 			wsprintf(Buffer,_T("%d.%d %s"), ModeIndex, curtype+1, gettext(TEXT("_@M909_"))); // Turn
 #else
 			wsprintf(Buffer,_T("%d.%d %s"), ModeIndex, curtype+1, gettext(TEXT("_@M1600_"))); // DISABLED
@@ -242,7 +242,7 @@ void MapWindow::DrawInfoPage(HDC hdc,  RECT rc, bool forceinit )
 			}
 			break;
 		case IM_TRI:
-#ifndef LKCOMPETITION
+#if 1
 			wsprintf(Buffer,gettext(TEXT("_@M913_"))); // Experimental
 #else
 			wsprintf(Buffer,_T("---"));
@@ -839,7 +839,7 @@ void MapWindow::DrawInfoPage(HDC hdc,  RECT rc, bool forceinit )
 	// Other values are using the copy of struct made 1 second later
 	//
 label_TRI:
-#ifndef LKCOMPETITION
+#ifndef 1
 	VDrawLine(hdc,rc, qcolumn[0],qrow[2],qcolumn[16],qrow[2],RGB_DARKGREEN);
 	DrawTRI(hdc, rc);
 	showunit=true; // 091219

@@ -330,8 +330,7 @@ bool CheckPolarsDir() {
   TCHAR srcdir[MAX_PATH];
   TCHAR srcfile[MAX_PATH];
   LocalPath(srcdir, _T(LKD_POLARS));
-  _stprintf(srcfile,TEXT("%s\\_POLARS"),srcdir);
-  if (  GetFileAttributes(srcfile) == 0xffffffff ) {
+  if (  GetFileAttributes(srcdir) == 0xffffffff ) {
 	return false;
   }
 
@@ -371,9 +370,9 @@ bool CheckFilesystemWritable() {
   FILE *stream;
   stream=_wfopen(srcfile,_T("a"));
   if (stream==NULL) return false;
-  if (fprintf(stream,"FILESYSTEM WRITE CHECK, THIS FILE CAN BE REMOVED ANY TIME\n")<0) return false;
-  fclose(stream);
-  return(true);
+  bool success = fprintf(stream,"FILESYSTEM WRITE CHECK, THIS FILE CAN BE REMOVED ANY TIME\n") >= 0;
+  success &= fclose(stream) == 0;
+  return(success);
 }
 
 
