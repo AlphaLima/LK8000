@@ -141,13 +141,17 @@ BOOL for_all_device(BOOL (*(DeviceDescriptor_t::*func))(DeviceDescriptor_t* d, _
 
     DeviceScopeLock Lock(CritSec_Comm);
     for( DeviceDescriptor_t& d : DeviceList) {
-        if( !d.Disabled && d.Com && (d.*func) ) {
-          nbDeviceFailed +=  (d.*func)(&d, Val1) ? 0 : 1;
-      }
-        else
-        {
-          if( !d.Disabled && (d.iSharedPort >=0) && (d.*func))
-            nbDeviceFailed +=  (d.*func)(&DeviceList[d.iSharedPort] , Val1) ? 0 : 1;
+        if (!d.Disabled && d.Com ) {
+            if (d.*func) {
+              nbDeviceFailed +=  (d.*func)(&d, Val1) ? 0 : 1;
+            }
+
+            if ( (d.iSharedPort >= 0) && (d.iSharedPort < array_size(DeviceList)) ) {
+                DeviceDescriptor_t& dShared = DeviceList[d.iSharedPort];
+                if (dShared.*func) {
+                    nbDeviceFailed +=  (dShared.*func)(&dShared, Val1) ? 0 : 1;
+                }
+            }
         }
     }
     return (nbDeviceFailed > 0);
@@ -167,14 +171,18 @@ BOOL for_all_device(BOOL (*(DeviceDescriptor_t::*func))(DeviceDescriptor_t* d, _
 
     DeviceScopeLock Lock(CritSec_Comm);
     for( DeviceDescriptor_t& d : DeviceList) {
-        if( !d.Disabled && d.Com && (d.*func) ) {
-          nbDeviceFailed +=  (d.*func)(&d, Val1, Val2) ? 0 : 1;
-      }
-      else
-      {
-        if( !d.Disabled && (d.iSharedPort >=0) && (d.*func))
-          nbDeviceFailed +=  (d.*func)(&DeviceList[d.iSharedPort] , Val1, Val2) ? 0 : 1;
-      }
+        if (!d.Disabled && d.Com ) {
+            if (d.*func) {
+                nbDeviceFailed +=  (d.*func)(&d, Val1, Val2) ? 0 : 1;
+            }
+
+            if ( (d.iSharedPort >= 0) && (d.iSharedPort < array_size(DeviceList)) ) {
+                DeviceDescriptor_t& dShared = DeviceList[d.iSharedPort];
+                if (dShared.*func) {
+                    nbDeviceFailed +=  (dShared.*func)(&dShared, Val1, Val2) ? 0 : 1;
+                }
+            }
+        }
     }
     return (nbDeviceFailed > 0);
 }
