@@ -770,6 +770,8 @@ int numlegs=0;
     if(fZoom > 1)  fTic = 5;   else   // on slow devices like MIO
     if(fZoom > 0.5)fTic = 2;   else   // the user should use Analysis page for this
     if(fZoom > 0.2)fTic = 1;*/
+    if( DISTANCEMODIFY > 0.0)
+      fTic =  fTic/ DISTANCEMODIFY;
 
     for(int i= 0 ; i < min(numlegs,2); i++)
     {
