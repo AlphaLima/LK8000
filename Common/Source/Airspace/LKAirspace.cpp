@@ -2247,7 +2247,7 @@ void CAirspaceManager::QnhChangeNotify(const double &newQNH) {
 
 int CAirspaceManager::ScanAirspaceLineList(double lats[AIRSPACE_SCANSIZE_X], double lons[AIRSPACE_SCANSIZE_X],
         double terrain_heights[AIRSPACE_SCANSIZE_X],
-        AirSpaceSideViewSTRUCT airspacetype[MAX_NO_SIDE_AS], int iMaxNoAs) const {
+        AirSpaceSideViewSTRUCT airspacetype[MAX_NO_SIDE_AS], int iMaxNoAs)  {
     int iNoFoundAS = 0; // number of found airspaces in scan line
     unsigned int iSelAS = 0; // current selected airspace for processing
     unsigned int i; // loop variable
@@ -2255,10 +2255,46 @@ int CAirspaceManager::ScanAirspaceLineList(double lats[AIRSPACE_SCANSIZE_X], dou
     ScopeLock guard(_csairspaces);
 
     airspacetype[0].psAS = NULL;
+
+    CAirspace *newairspace = NULL;
+    if (Flags_DrawTask )
+    if (ValidTaskPoint(0))
+    {
+      StartupStore(TEXT(" Task found in Airspacescan %s"),  NEWLINE);
+      int i=1;
+      while( ValidTaskPoint(i))
+    	i++;
+      i--;
+
+      if(ValidTaskPoint(i))
+      {
+    	if((FinishRadius > 0) && (ActiveTaskPoint == i))
+    	{
+          int tmpIdx = Task[i].Index;
+          StartupStore(TEXT(" Task found in Finish point %s %s"),WayPointList[tmpIdx].Name , NEWLINE);
+          newairspace = new (std::nothrow) CAirspace_Circle(WayPointList[tmpIdx].Latitude, WayPointList[tmpIdx].Longitude , FinishRadius);
+          if (newairspace) {
+        	  AIRSPACE_ALT base; base.AGL = 0; base.Altitude = 0; base.Base=abAGL;
+        	  AIRSPACE_ALT top;  top.AGL = FinishMinHeight; ; top.Base=abAGL; top.Altitude = FinishMinHeight* ALTITUDEMODIFY/1000  ; top.AGL = FinishMinHeight*ALTITUDEMODIFY/1000;
+              if(StartHeightRef > 0)
+              {
+            	top.Base=abMSL;
+            	base.Base=abMSL;
+              }
+              newairspace->Init( MsgToken(687), AATASK, base, top, false); //_@M687_ "Task Finish"
+              { // Begin Lock
+                  ScopeLock guard(_csairspaces);
+                  _airspaces_near.push_back(newairspace);
+            //      StartupStore(TEXT(" Finisch Circle Task airspace created %s %s"),WayPointList[tmpIdx].Name , NEWLINE);
+              } // End Lock
+          }
+    	}
+      }
+    }
+
     for (it = _airspaces_near.begin(); it != _airspaces_near.end(); ++it) {
         LKASSERT((*it)->Type() < AIRSPACECLASSCOUNT);
         LKASSERT((*it)->Type() >= 0);
-
         if ((CheckAirspaceAltitude(*(*it)->Base(), *(*it)->Top()) == TRUE)&& (iNoFoundAS < iMaxNoAs - 1) &&
                 ((MapWindow::iAirspaceMode[(*it)->Type()] % 2) > 0)) {
             for (i = 0; i < AIRSPACE_SCANSIZE_X; i++) {
@@ -2376,7 +2412,11 @@ int CAirspaceManager::ScanAirspaceLineList(double lats[AIRSPACE_SCANSIZE_X], dou
             } // finished scanning range
         } // if overlaps bounds
     } // for iterator
-
+    if(newairspace != NULL)
+    {
+      _airspaces_near.pop_back();
+      newairspace = NULL;
+    }
     return iNoFoundAS;
 }
 

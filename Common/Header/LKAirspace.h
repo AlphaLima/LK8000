@@ -457,7 +457,7 @@ public:
 */
   int ScanAirspaceLineList(double lats[AIRSPACE_SCANSIZE_X], double lons[AIRSPACE_SCANSIZE_X],
                         double terrain_heights[AIRSPACE_SCANSIZE_X],
-                        AirSpaceSideViewSTRUCT airspacetype[MAX_NO_SIDE_AS], int) const;
+                        AirSpaceSideViewSTRUCT airspacetype[MAX_NO_SIDE_AS], int) ; //const;
 
   CAirspace* FindNearestAirspace(const double &longitude, const double &latitude,
              double *nearestdistance, double *nearestbearing, double *height = NULL) const;
