@@ -1706,6 +1706,7 @@ void InputEvents::eventSendNMEA(const TCHAR *misc) {
     }
     if (found_flarm) {
       devWriteNMEAString(found_flarm, misc);
+      StartupStore(_T("eventSendNMEA Port%i : %s \n"),found_flarm->PortNumber ,misc);
     } else {
       DoStatusMessage(_T("NO FLARM"));
       StartupStore(_T("eventSendNMEA : NO FLARM\n"));
