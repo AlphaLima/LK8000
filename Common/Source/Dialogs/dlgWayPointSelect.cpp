@@ -45,8 +45,11 @@ static WndOwnerDrawFrame *wWayPointListEntry = NULL;
 static double DistanceFilter[] = {0.0, 25.0, 50.0, 75.0, 100.0, 150.0, 250.0, 500.0, 1000.0};
 static unsigned DistanceFilterIdx=0;
 
+#define DirNoFilter 0
 #define DirHDG -1
-static int DirectionFilter[] = {0, DirHDG, 360, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
+#define DirBRG  -2
+#define DirAhead -3
+static int DirectionFilter[] = {DirNoFilter, DirHDG, DirBRG, 360, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
 static unsigned DirectionFilterIdx=0;
 static int lastHeading=0;
 
@@ -78,6 +81,24 @@ static void OnWaypointListEnter(WindowControl * Sender,
 
 static WayPointSelectInfo_t *WayPointSelectInfo=NULL;
 static int *StrIndex=NULL;
+
+
+int GetTaskBearing(void)
+{
+int value=0;
+	if ( ValidTaskPoint(ActiveTaskPoint) != false )
+	{
+		int index = Task[ActiveTaskPoint].Index;
+		if (index>=0) {
+
+			if (AATEnabled)
+				value=CALCULATED_INFO.WaypointBearing;
+			else
+				value = WayPointCalc[index].Bearing;
+		}
+	}
+	return AngleLimit360(value);
+}
 
 static int WaypointNameCompare(const void *elem1, const void *elem2 ){
   if (((const WayPointSelectInfo_t *)elem1)->FourChars < ((const WayPointSelectInfo_t *)elem2)->FourChars)
@@ -123,11 +144,25 @@ static int WaypointDirectionCompare(const void *elem1, const void *elem2 ){
 
   int a, a1, a2;
 
-  a = DirectionFilter[DirectionFilterIdx];
-  if (a == DirHDG){
-    a = iround(CALCULATED_INFO.Heading);
-    lastHeading = a;
+
+  switch (DirectionFilter[DirectionFilterIdx])
+  {
+
+    case DirHDG:
+    case DirAhead:
+      a = iround(CALCULATED_INFO.Heading);
+    break;
+
+    case DirBRG:
+    	a = GetTaskBearing();
+	  break;
+    case DirNoFilter:
+    default:
+      a = DirectionFilter[DirectionFilterIdx];
+    break;
   }
+
+  lastHeading = a;
 
   a1 = (int)(((const WayPointSelectInfo_t *)elem1)->Direction - a);
   a2 = (int)(((const WayPointSelectInfo_t *)elem2)->Direction - a);
@@ -183,6 +218,7 @@ static void SetWPNameCaption(const TCHAR* tFilter) {
   wpnewName->SetCaption(namfilter);
 
 }
+
 
 unsigned int numvalidwp=0;
 
@@ -382,7 +418,9 @@ static void UpdateList(void){
 
 		LKASSERT(WayPointSelectInfo[i].Index>=0 && WayPointSelectInfo[i].Index<(signed)WayPointList.size());
 	//	LK_tcsncpy(wname,WayPointList[WayPointSelectInfo[i].Index].Name, NAME_SIZE);
-		 _sntprintf(wname,EXT_NAMESIZE, _T("%s %s"), WayPointList[WayPointSelectInfo[i].Index].Name, WayPointList[WayPointSelectInfo[i].Index].Code);
+	  _sntprintf(wname,EXT_NAMESIZE, TEXT("%s %s"),  WayPointList[WayPointSelectInfo[i].Index].Name,
+							                                     WayPointList[WayPointSelectInfo[i].Index].Code );
+
 		CharUpper(wname);
 
 		if ( _tcsstr(  wname,sTmp ) ) {
@@ -505,20 +543,25 @@ static void OnFilterNameButton(WndButton* pWnd) {
   }
   FilterMode(true);
   UpdateList();
+  wWayPointListEntry->SetFocus();
+  wWayPointList->SetItemIndexPos(0);
   if((SelectedWp>=0) && (SelectedWp < (int)WayPointList.size()))
   {
-	for (i=0; i<UpLimit; i++)
-	{
-
-	    if(WayPointSelectInfo[StrIndex[i]].Index == SelectedWp)
-	    {
-		  CursorPos = i;
-	    }
-	}
-
-    wWayPointListEntry->SetFocus();
-    wWayPointList->SetItemIndexPos(CursorPos);
-    wWayPointList->Redraw();
+    for (i=0; i<UpLimit; i++)
+    {
+      if(StrIndex != NULL)
+      {
+        if(( StrIndex[i] >= 0 ) && (StrIndex[i] < (int)WayPointList.size()))
+        {
+          if(WayPointSelectInfo[StrIndex[i]].Index == SelectedWp)
+          {
+            CursorPos = i;
+            wWayPointList->SetItemIndexPos(CursorPos);
+            wWayPointList->CenterScrollCursor();
+          }
+        }
+      }
+    }
   }
   wWayPointList->Redraw();
 
@@ -556,7 +599,7 @@ static void OnFilterDistance(DataField *Sender, DataField::DataAccessKind_t Mode
   }
 
   if (DistanceFilterIdx == 0)
-    _stprintf(sTmp, TEXT("%c"), '*');
+    _tcsncpy(sTmp,_T("*"),NAMEFILTERLEN);
   else
     _stprintf(sTmp, TEXT("%.0f%s"),
               DistanceFilter[DistanceFilterIdx],
@@ -567,22 +610,40 @@ static void OnFilterDistance(DataField *Sender, DataField::DataAccessKind_t Mode
 
 static void SetDirectionData(DataField *Sender){
 
-  TCHAR sTmp[20];
+  TCHAR sTmp[30];
 
   if (Sender == NULL){
     Sender = wpDirection->GetDataField();
   }
 
-  if (DirectionFilterIdx == 0)
-    _stprintf(sTmp, TEXT("%c"), '*');
-  else if (DirectionFilterIdx == 1){
-    int a = iround(CALCULATED_INFO.Heading);
-    if (a <=0)
-      a += 360;
+
+
 	//LKTOKEN _@M1229_ "HDG"
-    _stprintf(sTmp, TEXT("%s(%d%s)"), MsgToken(1229), a, MsgToken(2179));
-  }else
-    _stprintf(sTmp, TEXT("%d%s"), DirectionFilter[DirectionFilterIdx],MsgToken(2179));
+    int a = iround(CALCULATED_INFO.Heading);  if (a <=0)   a += 360;
+    switch (DirectionFilter[DirectionFilterIdx] )
+    {
+    	case DirNoFilter: _stprintf(sTmp, TEXT("%c"), '*');
+    	break;
+      case DirHDG:
+      	{
+      	_stprintf(sTmp, TEXT("%s(%d%s)"), MsgToken(1229), a, MsgToken(2179));  // _@1229 HDG  _@M2179 °
+      	}
+      break;
+      case DirAhead:
+      	{
+      	_stprintf(sTmp, TEXT("%s(%d%s)"), MsgToken(2470), a, MsgToken(2179)); // _@2470 Ahead  _@M2179 °
+      	}
+      break;
+      case DirBRG:
+      	{
+         a = iround(GetTaskBearing());
+      	_stprintf(sTmp, TEXT("%s(%d%s)"), MsgToken(154), a, MsgToken(2179));  // _@M154 Brg  _@M2179 °
+      	}
+      break;
+
+    	default: _stprintf(sTmp, TEXT("%d%s"), DirectionFilter[DirectionFilterIdx],MsgToken(2179));
+    	break;
+    }
 
   Sender->Set(sTmp);
 
@@ -625,7 +686,7 @@ static void OnFilterDirection(DataField *Sender, DataField::DataAccessKind_t Mod
 
 static void OnFilterType(DataField *Sender, DataField::DataAccessKind_t Mode){
 
-  TCHAR sTmp[50];
+  TCHAR sTmp[NAMEFILTERLEN];
 
   switch(Mode){
     case DataField::daGet:
@@ -651,7 +712,7 @@ static void OnFilterType(DataField *Sender, DataField::DataAccessKind_t Mode){
     break;
   }
 
-  _stprintf(sTmp, TEXT("%s"), TypeFilter[TypeFilterIdx]);
+  _tcsncpy(sTmp, TypeFilter[TypeFilterIdx],NAMEFILTERLEN);
 
   Sender->Set(sTmp);
 
@@ -661,7 +722,7 @@ static unsigned int DrawListIndex=0;
 
 // Painting elements after init
 
-
+extern int FindFirstIn(const TCHAR Txt[] ,const TCHAR Sub[]);
 
 static void OnPaintListItem(WindowControl * Sender, LKSurface& Surface) {
     if (!Sender) {
@@ -699,11 +760,52 @@ static void OnPaintListItem(WindowControl * Sender, LKSurface& Surface) {
         int idx = WayPointSelectInfo[i].Index;
 
         // Draw Name
+			  _sntprintf(TmpName,EXT_NAMESIZE, TEXT("%s"),  WayPointList[WayPointSelectInfo[i].Index].Name);
+
         if( _tcslen(WayPointList[WayPointSelectInfo[i].Index].Code ) >1)
-          _sntprintf(TmpName, EXT_NAMESIZE, _T("%s (%s)"), WayPointList[WayPointSelectInfo[i].Index].Name,  WayPointList[WayPointSelectInfo[i].Index].Code);
-        else
-          _sntprintf(TmpName, EXT_NAMESIZE, _T("%s"), WayPointList[WayPointSelectInfo[i].Index].Name);
+        {          
+				  _sntprintf(TmpName,EXT_NAMESIZE, TEXT("%s (%s)"), WayPointList[WayPointSelectInfo[i].Index].Name,
+								                                       		 WayPointList[WayPointSelectInfo[i].Index].Code );
+        }
         Surface.DrawTextClip(w0, TextPos, TmpName, w1);
+
+        _tcsncpy(sTmp, TmpName ,EXT_NAMESIZE);
+
+
+        int Start = FindFirstIn(sTmp ,sNameFilter) ;
+
+        // redraw the found substring in different color
+        if(Start >= 0)
+        {
+          int iFilterLen = _tcslen(sNameFilter);
+          sTmp[Start]=0;
+
+          int wcol = LineHeight + Surface.GetTextWidth(sTmp);;
+          _tcsncpy(sTmp, TmpName ,EXT_NAMESIZE);
+
+          for(int i = 0; i < iFilterLen+1; i++)	{
+            sTmp[i] = sTmp[i+Start];
+       	  }
+          sTmp[iFilterLen]=0;
+          int subend = width  - w0 - w2 - Surface.GetTextWidth(sTmp); // Max Name width
+          wcol = min (wcol,w1+LineHeight);
+
+          subend = min(w1+LineHeight,wcol+Surface.GetTextWidth(sTmp));
+          subend = max(0,subend);
+
+          if(wcol < subend)
+          {
+            int h =  w0-IBLSCALE(4);
+
+
+            const auto hOldPen = Surface.SelectObject(LKPen_Black_N2);
+
+            Surface.DrawLine(wcol, h, subend, h);
+
+            Surface.SelectObject(hOldPen);
+          }
+        }
+
 
         // Draw Distance : right justified after waypoint Name
         _stprintf(sTmp, TEXT("%.0f%s"), WayPointSelectInfo[i].Distance, Units::GetDistanceName());
@@ -759,15 +861,29 @@ static void OnWPSCloseClicked(WndButton* pWnd) {
 }
 
 static bool OnTimerNotify(WndForm* pWnd) {
-  if (DirectionFilterIdx == 1){
-    const int a = (lastHeading - iround(CALCULATED_INFO.Heading));
-    if (abs(a) > 0){
-      UpdateList();
-      SetDirectionData(NULL);
-      wpDirection->RefreshDisplay();
-    }
+int a=-1;
+	switch(DirectionFilter[DirectionFilterIdx] )
+	{
+		case DirHDG:
+		  a = iround(CALCULATED_INFO.Heading);
+    break;
+
+	  case DirBRG:
+     	a = GetTaskBearing();
+    break;
   }
-  wWayPointList->Redraw();
+
+  if(a >= 0)
+	{
+    if (abs(a-lastHeading) > 10)
+    {
+			lastHeading = a;
+			UpdateList();
+			SetDirectionData(NULL);
+			wpDirection->RefreshDisplay();
+			wWayPointList->Redraw();
+		}
+	}
   return true;
 }
 
@@ -882,7 +998,7 @@ int dlgWayPointSelect(double lon, double lat, int type, int FilterNear){
   PrepareData();
   if (WayPointSelectInfo==NULL) goto _return; // Will be null also if strindex was null
   UpdateList();
-  wf->SetTimerNotify(5000, OnTimerNotify);
+  wf->SetTimerNotify(500, OnTimerNotify);
 
   if ((wf->ShowModal() == mrOK) && (UpLimit - LowLimit > 0) && (ItemIndex >= 0)
    && (ItemIndex < (UpLimit - LowLimit))) {
@@ -895,6 +1011,7 @@ int dlgWayPointSelect(double lon, double lat, int type, int FilterNear){
 	ItemIndex = -1;
 
 _return:
+  wf->SetTimerNotify(0, NULL);
   if (WayPointSelectInfo!=NULL) free(WayPointSelectInfo);
   if (StrIndex!=NULL) free(StrIndex);
 

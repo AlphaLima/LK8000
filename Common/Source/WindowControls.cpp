@@ -2924,6 +2924,24 @@ bool WndFrame::OnLButtonDown(const POINT& Pos) {
   return false;
 }
 
+void WndListFrame::CenterScrollCursor(void)
+{
+int Total    = mListInfo.ItemCount;
+int halfPage = mListInfo.ItemInPageCount/2;
+
+  if( Total > mListInfo.ItemInPageCount)
+  {
+    if( mListInfo.ItemIndex > (halfPage))
+      if(( mListInfo.ScrollIndex + mListInfo.ItemInPageCount) < Total)
+      {
+	mListInfo.ScrollIndex  += halfPage;
+	mListInfo.ItemIndex    -= halfPage;
+
+	RecalculateIndices(false);
+    }
+  }
+}
+
 void WndListFrame::SetItemIndexPos(int iValue)
 {
 int Total = mListInfo.ItemCount;
