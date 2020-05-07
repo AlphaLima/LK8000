@@ -16,7 +16,7 @@
 #include "Util/tstring.hpp"
 #include "Poco/Event.h"
 #include "Poco/Thread.h"
-
+//
 class ComPort : public Poco::Runnable {
 public:
     ComPort(int idx, const tstring& sName);

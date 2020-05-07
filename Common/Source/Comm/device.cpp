@@ -372,7 +372,7 @@ void RefreshComPortList() {
     COMMPort.push_back(_T("TCPClient"));
     COMMPort.push_back(_T("TCPServer"));
     COMMPort.push_back(_T("UDPServer"));
-
+    COMMPort.push_back(_T("NMEAReplay"));
 #ifdef ANDROID
 
   JNIEnv *env = Java::GetEnv();
