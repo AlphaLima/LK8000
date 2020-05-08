@@ -12,6 +12,7 @@
 #include "Util/TruncateString.hpp"
 #include "BtHandler.h"
 #include "SerialPort.h"
+#include "FilePort.h"
 #include "Bluetooth/BthPort.h"
 #include "GpsIdPort.h"
 #include "TCPPort.h"
@@ -372,7 +373,7 @@ void RefreshComPortList() {
     COMMPort.push_back(_T("TCPClient"));
     COMMPort.push_back(_T("TCPServer"));
     COMMPort.push_back(_T("UDPServer"));
-    COMMPort.push_back(_T("NMEAReplay"));
+    COMMPort.push_back(NMEA_REPLAY);
 #ifdef ANDROID
 
   JNIEnv *env = Java::GetEnv();
@@ -705,6 +706,15 @@ BOOL devInit() {
 #ifdef ANDROID
             Com = new UsbSerialPort(i, &Port[4], dwSpeed[SpeedIndex], BitIndex);
 #endif
+        } else  if (_tcsncmp(Port,NMEA_REPLAY, _tcslen(NMEA_REPLAY)) == 0) {
+            Com = new FilePort(i, NMEA_REPLAY);
+
+						StartupStore(_T(". %s: Open File  %s for Device %c %s"), NMEA_REPLAY,Replay_FileName[i] , (_T('A') + i),NEWLINE);
+						if(Com)
+							StartupStore(_T(". COM for Devce %c created %s"), (_T('A') + i),NEWLINE);
+						else
+							StartupStore(_T(". COM for Devce %c NOT created %s"),(_T('A') + i),NEWLINE);
+
         } else {
             Com = new SerialPort(i, Port, dwSpeed[SpeedIndex], BitIndex, PollingMode);
         }
