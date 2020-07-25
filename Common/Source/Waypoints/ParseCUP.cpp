@@ -113,6 +113,7 @@ namespace {
       if(it != Headers.end()) {
         return Entries[it->second];
       }
+      empty = _T("");
       return empty;
     }
 
@@ -121,7 +122,7 @@ namespace {
     }
 
   private:
-    const tstring empty = _T("");
+    tstring empty /*= _T("")*/;
     const std::map<tstring, size_t>& Headers;
     const std::vector<tstring> Entries;
   };
