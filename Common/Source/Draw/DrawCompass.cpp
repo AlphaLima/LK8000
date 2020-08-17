@@ -10,7 +10,6 @@
 #include "DoInits.h"
 #include "LKObjects.h"
 #include "ScreenGeometry.h"
-
 void MapWindow::DrawCompass(LKSurface& Surface, const RECT& rc, const double angle)
 {
   POINT Start;
@@ -24,7 +23,9 @@ void MapWindow::DrawCompass(LKSurface& Surface, const RECT& rc, const double ang
 	lastRcTop=0;
 	DoInit[MDI_COMPASS]=false;
     }
-
+   // no more clock, no need to have different compass position
+	Start.y = rc.top + NIBLSCALE(11); 
+	Start.x = rc.right - NIBLSCALE(11);
     if (lastDisplayAngle != angle || lastRcRight != rc.right || lastRcTop != rc.top){
 
       Arrow[0].x  = 0;
@@ -61,6 +62,14 @@ void MapWindow::DrawCompass(LKSurface& Surface, const RECT& rc, const double ang
     Surface.SelectObject(hbOld);
     Surface.SelectObject(hpOld);
 
+    
+   const auto oldFont = Surface.SelectObject(LK8PanelUnitFont);     
+  if(OverColorRef==RGB_SBLACK)
+    Surface.SetTextColor(RGB_SWHITE);
+  else
+    Surface.SetTextColor(RGB_SBLACK);
+  SIZE tsize;
+  Surface.GetTextSize(_T("N"), &tsize);
+  LKWriteText(Surface, _T("N"), Start.x- tsize.cx/2, Start.y-tsize.cy/2 , WTMODE_OUTLINED, WTALIGN_LEFT, OverColorRef, true);
+  Surface.SelectObject(oldFont);     
 }
-
-
