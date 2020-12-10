@@ -40,6 +40,14 @@ BOOL OpenClose(PDeviceDescriptor_t d) {
   return TRUE;
 }
 
+BOOL KRT2Heartbeat(PDeviceDescriptor_t d) {
+  if(d && !d->Disabled && d->Com)
+  {
+    d->Com->Write('S');
+  }
+  return(TRUE);
+}
+
 
 /*****************************************************************************
  * this function set the station name and frequency on the KRT2
@@ -533,7 +541,7 @@ BOOL KRT2Install(PDeviceDescriptor_t d){
 
   d->Open = OpenClose;
   d->Close = OpenClose;
-
+  d->HeartBeat      = KRT2Heartbeat;
   d->IsRadio        = KRT2IsRadio;
   d->PutVolume      = KRT2PutVolume;
   d->PutSquelch     = KRT2PutSquelch;
