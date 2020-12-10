@@ -251,8 +251,10 @@ static int counter =0;
 
     if(szCommand[0] == 'S')
     {
-      d->Com->Write('x');
-
+      if(d && !d->Disabled && d->Com)
+      {
+        d->Com->Write('x');
+      }
       if(uiKRT2DebugLevel) StartupStore(_T("KRT2 heartbeat: #%i %s"),counter++ ,NEWLINE);
       if(!device_found) {
         device_found = true;
