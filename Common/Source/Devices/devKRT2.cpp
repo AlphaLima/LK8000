@@ -28,6 +28,9 @@ int uiKRT2DebugLevel = 1;
 int uiKRT2DebugLevel = 0;
 #endif
 
+static Mutex _KRT2COM_mutex;                  // Mutex
+BOOL debug_   = true;
+
 
 BOOL KRT2IsRadio(PDeviceDescriptor_t d) {
   return(TRUE);
@@ -130,7 +133,9 @@ BOOL KRT2PutVolume(PDeviceDescriptor_t d, int Volume) {
     int len = SetKRT2Audio(szTmp, Volume,  RadioPara.Squelch, RadioPara.Vox);
     if(len > 0)
     {
+      _KRT2COM_mutex.Lock();
       d->Com->Write(szTmp, len);
+      _KRT2COM_mutex.Unlock();
       if(uiKRT2DebugLevel) StartupStore(_T(". KRT2 Volume  %i%s"), Volume,NEWLINE);
       RadioPara.Volume = Volume;
     }
@@ -149,7 +154,9 @@ BOOL KRT2PutSquelch(PDeviceDescriptor_t d, int Squelch) {
     int  len  = SetKRT2Audio(szTmp, RadioPara.Volume,  Squelch, RadioPara.Vox);
     if(len > 0)
     {
+      _KRT2COM_mutex.Lock();
       d->Com->Write(szTmp,len);
+      _KRT2COM_mutex.Unlock();      
       if(uiKRT2DebugLevel) StartupStore(_T(". KRT2 Squelch  %i%s"), Squelch,NEWLINE);
       RadioPara.Squelch = Squelch;
     }
@@ -166,8 +173,9 @@ BOOL KRT2PutFreqActive(PDeviceDescriptor_t d, double Freq, const TCHAR* StationN
     uint8_t szTmp[25];
 
     int len =SetKRT2Station(szTmp, 'U', Freq, StationName);
-    d->Com->Write(szTmp, len);
-
+    _KRT2COM_mutex.Lock();
+    d->Com->Write(szTmp, len);    
+    _KRT2COM_mutex.Unlock();
     if(uiKRT2DebugLevel) StartupStore(_T(". KRT2 Active Station %7.3fMHz %s%s"), Freq, StationName,NEWLINE);
   }
   return(TRUE);
@@ -181,8 +189,9 @@ BOOL KRT2PutFreqStandby(PDeviceDescriptor_t d, double Freq,  const TCHAR* Statio
     uint8_t szTmp[25];
 
     int len = SetKRT2Station(szTmp, 'R', Freq, StationName);
+    _KRT2COM_mutex.Lock();
     d->Com->Write(szTmp, len);
-
+    _KRT2COM_mutex.Unlock();
     if(uiKRT2DebugLevel) StartupStore(_T(". KRT2 Standby Station %7.3fMHz %s%s"), Freq, StationName,NEWLINE);
   }
   return(TRUE);
@@ -193,7 +202,9 @@ BOOL KRT2StationSwap(PDeviceDescriptor_t d) {
   if(d && !d->Disabled && d->Com)
   {
     uint8_t szTmp[] = { STX, 'C' }; 
+    _KRT2COM_mutex.Lock();
     d->Com->Write(szTmp, std::size(szTmp));
+    _KRT2COM_mutex.Unlock();
     if(uiKRT2DebugLevel) StartupStore(_T(". KRT2  station swap %s"), NEWLINE);
   }
   return(TRUE);
@@ -206,15 +217,17 @@ BOOL KRT2RadioMode(PDeviceDescriptor_t d, int mode) {
     if( mode > 0  )
     {
       uint8_t Cmd[] = { STX, 'O' };   // turn Dual Mode On
+      _KRT2COM_mutex.Lock();
       d->Com->Write(Cmd, std::size(Cmd));
-
+      _KRT2COM_mutex.Unlock();
       if(uiKRT2DebugLevel) StartupStore(_T(". KRT2  Dual on %s"), NEWLINE);
     }
     else
     {
       uint8_t Cmd[] = { STX, 'o' };   // turn Dual Mode Off
+      _KRT2COM_mutex.Lock();
       d->Com->Write(Cmd, std::size(Cmd));
-
+      _KRT2COM_mutex.Unlock();
       if(uiKRT2DebugLevel) StartupStore(_T(". KRT2  Dual off %s"), NEWLINE);
     }
   }
@@ -243,8 +256,9 @@ static int counter =0;
 
     if(szCommand[0] == 'S')
     {
+      _KRT2COM_mutex.Lock();
       d->Com->Write('x');
-
+      _KRT2COM_mutex.Unlock();
       if(uiKRT2DebugLevel) StartupStore(_T("KRT2 heartbeat: #%i %s"),counter++ ,NEWLINE);
       if(!device_found) {
         device_found = true;
@@ -527,10 +541,85 @@ BOOL KRT2ParseString(DeviceDescriptor_t *d, char *String, int len, NMEA_INFO *GP
 }
 
 
+PDeviceDescriptor_t ptmp_d = NULL;
+
+
+class KRT2HeartbeatThread : public Poco::Runnable {
+public:
+  void Start() {
+    if (!Thread.isRunning()) {
+      bStop = false;
+      
+      Thread.start(*this);
+    }
+  }
+
+  void Stop() {
+    if (Thread.isRunning()) {
+      bStop = true;
+     
+      Thread.join();
+    }
+  }
+
+  
+
+
+
+protected:
+  bool bStop;
+  Poco::Thread Thread;
+
+  void run() {
+    if (debug_)
+      StartupStore(TEXT("KRT2 Heartbeat Thread Started !")); 
+    while (!bStop) {
+
+
+      Poco::Thread::sleep(10000); 
+      Poco::Thread::yield();
+      if(ptmp_d)
+      {
+        _KRT2COM_mutex.Lock();
+        if(ptmp_d && !ptmp_d->Disabled && ptmp_d->Com)
+        {
+          ptmp_d->Com->Write('S');       
+          if (debug_) StartupStore(TEXT("%s Heartbeat 'S' !!!"), ptmp_d->Name );  
+        }
+        _KRT2COM_mutex.Unlock();
+      }
+    }
+
+    if (debug_)
+      StartupStore(TEXT("KRT2 Heartbeat Thread Stopped !"));
+
+  }
+};
+
+KRT2HeartbeatThread KRT2HeartbeatThreadInstance;
+
+
+
+
+class KRT2ResourceLock {
+public:
+  KRT2ResourceLock() {
+  StartupStore(TEXT(".... Enter ResourceLock KRT2   %s"), NEWLINE);
+  KRT2HeartbeatThreadInstance.Start();
+  };
+  ~KRT2ResourceLock() {
+    StartupStore(TEXT(".... Leave ResourceLock KRT2 %s"), NEWLINE);
+    KRT2HeartbeatThreadInstance.Stop();
+    ptmp_d = NULL;
+  }
+};
+
+KRT2ResourceLock KRT2ResourceGuard;  //simply need to exist for recource Lock/Unlock
+
 
 BOOL KRT2Install(PDeviceDescriptor_t d){
   _tcscpy(d->Name, TEXT("Dittel KRT2"));
-
+  ptmp_d = d;
   d->Open = OpenClose;
   d->Close = OpenClose;
 
