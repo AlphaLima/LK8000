@@ -29,7 +29,7 @@ int uiKRT2DebugLevel = 0;
 #endif
 
 static Mutex _KRT2COM_mutex;                  // Mutex
-BOOL debug_   = true;
+
 
 
 BOOL KRT2IsRadio(PDeviceDescriptor_t d) {
@@ -571,7 +571,7 @@ protected:
   Poco::Thread Thread;
 
   void run() {
-    if (debug_)
+    if (uiKRT2DebugLevel)
       StartupStore(TEXT("KRT2 Heartbeat Thread Started !")); 
     while (!bStop) {
 
@@ -584,13 +584,13 @@ protected:
         if(ptmp_d && !ptmp_d->Disabled && ptmp_d->Com)
         {
           ptmp_d->Com->Write('S');       
-          if (debug_) StartupStore(TEXT("%s Heartbeat 'S' !!!"), ptmp_d->Name );  
+          if (uiKRT2DebugLevel) StartupStore(TEXT("%s Heartbeat 'S' !!!"), ptmp_d->Name );  
         }
         _KRT2COM_mutex.Unlock();
       }
     }
 
-    if (debug_)
+    if (uiKRT2DebugLevel)
       StartupStore(TEXT("KRT2 Heartbeat Thread Stopped !"));
 
   }
