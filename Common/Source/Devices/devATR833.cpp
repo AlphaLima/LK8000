@@ -463,6 +463,19 @@ LKASSERT(d !=NULL);
       processed  = 3;
     break;
     /*****************************************************************************************/
+    case 0x53:               // Standby Frequency memory recall
+      _stprintf(RadioPara.PassiveName,_T("Memory%i"), szCommand[1]);
+      RadioPara.PassiveFrequency = (double)szCommand[2] +(((double) szCommand[3] * 5.0) / 1000.0);
+      _stprintf(szTempStr,_T("ATR833 Passive: %7.3fMHz"),  RadioPara.PassiveFrequency );
+      if (iATR833DebugLevel)  StartupStore(_T("%s %s"),szTempStr, NEWLINE);
+      UpdateStationName(RadioPara.PassiveName, RadioPara.PassiveFrequency);
+
+      if (iATR833DebugLevel)StartupStore(_T("%s %s %s"),szTempStr,RadioPara.PassiveName, NEWLINE);
+      RadioPara.PassiveValid = true;
+      RadioPara.Changed = true;
+      processed  = 4;
+    break;
+    /*****************************************************************************************/
     case 0x13:               // Active Frequency
       RadioPara.ActiveFrequency = (double) szCommand[1] +(((double) szCommand[2] * 5.0) /1000.0);
       _stprintf(szTempStr,_T("ATR833 Active:  %7.3fMHz"),  RadioPara.ActiveFrequency );
