@@ -266,8 +266,8 @@ BOOL ATR833_KeepAlive(PDeviceDescriptor_t d) {
          }
          else 
          {
-           ATR833RequestAllData(d); // Ensure all data is current
-           if(iATR833DebugLevel==2)  StartupStore(_T("ATR833 ====== request data ====== %s"),  NEWLINE);         
+    //       ATR833RequestAllData(d); // Ensure all data is current
+     //      if(iATR833DebugLevel==2)  StartupStore(_T("ATR833 ====== request data ====== %s"),  NEWLINE);         
          }
 
       }
@@ -353,6 +353,8 @@ static uint8_t  converted[REC_BUFSIZE];
         case 0x41: CommanLength=1  ; break;         // Erroe State
         case 0x42: CommanLength=12 ; break;         // All Data
         case 0x43: CommanLength=4  ; break;         // Device Info
+        /*****************************************/
+        case 0x53: CommanLength=3  ; break;         // memory recall
         /*****************************************/
         case 0x80: CommanLength=0  ; break;         // Request RxTx
         case 0x81: CommanLength=0  ; break;         // Request Error
