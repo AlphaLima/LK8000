@@ -36,7 +36,7 @@ int DeviceTimeout = 2;
 bool Send_Command(PDeviceDescriptor_t d, uint8_t Command, uint8_t Len, uint8_t *uiArg);
 int ATR833_Convert_Answer(DeviceDescriptor_t *d, uint8_t *szCommand, int len);
 #ifdef TESTBENCH
-int  iATR833DebugLevel = 2;
+int  iATR833DebugLevel = 4;
 #else
 int  iATR833DebugLevel = 1;
 #endif
@@ -107,7 +107,7 @@ uint8_t uiCheckSum=0;
   szTmp[len++]= uiCheckSum;
   d->Com->Write(szTmp,len);
 
-  if(iATR833DebugLevel==3)
+  if(iATR833DebugLevel>=3)
   {
     StartupStore(_T("ATR833 ==== send  ====== %s"),  NEWLINE);
     for(int i = 0; i < (len-1); i++)
@@ -262,12 +262,12 @@ BOOL ATR833_KeepAlive(PDeviceDescriptor_t d) {
          if((Alternate++ % 2) == 0)      
          {
            Send_Command( d, 0x10 , 0, NULL);  // Send Keep alive
-           if(iATR833DebugLevel==2)  StartupStore(_T("ATR833 ====== Keep Alive ====== %s"),  NEWLINE);         
+           if(iATR833DebugLevel>=2)  StartupStore(_T("ATR833 ====== Keep Alive ====== %s"),  NEWLINE);         
          }
          else 
          {
-    //       ATR833RequestAllData(d); // Ensure all data is current
-     //      if(iATR833DebugLevel==2)  StartupStore(_T("ATR833 ====== request data ====== %s"),  NEWLINE);         
+           ATR833RequestAllData(d); // Ensure all data is current
+           if(iATR833DebugLevel>=2)  StartupStore(_T("ATR833 ====== request data ====== %s"),  NEWLINE);         
          }
 
       }
@@ -468,7 +468,8 @@ LKASSERT(d !=NULL);
     case 0x53:               // Standby Frequency memory recall
       _stprintf(RadioPara.PassiveName,_T("Memory%i"), szCommand[1]);
       RadioPara.PassiveFrequency = (double)szCommand[2] +(((double) szCommand[3] * 5.0) / 1000.0);
-      _stprintf(szTempStr,_T("ATR833 Passive: %7.3fMHz"),  RadioPara.PassiveFrequency );
+	    if(iATR833DebugLevel==2)  StartupStore(_T("ATR833 ====== memory frequency ====== %s"),  NEWLINE);  
+      _stprintf(szTempStr,_T("ATR833 Memory Recall: #%i %s %7.3fMHz"),  szCommand[1],RadioPara.PassiveName, RadioPara.PassiveFrequency );
       if (iATR833DebugLevel)  StartupStore(_T("%s %s"),szTempStr, NEWLINE);
       UpdateStationName(RadioPara.PassiveName, RadioPara.PassiveFrequency);
 
